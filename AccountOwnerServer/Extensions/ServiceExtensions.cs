@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Entities;
 using Microsoft.EntityFrameworkCore;
 using Repository;
+using UserService;
 
 namespace AccountOwnerServer.Extensions
 {
@@ -46,6 +47,11 @@ namespace AccountOwnerServer.Extensions
         public static void ConfigureRepositoryWrapper(this IServiceCollection services)
         {
             services.AddScoped<IRepositoryWrapper, RepositoryWrapper>();
+        }
+
+        public static void ConfigureUserService(this IServiceCollection services)
+        {
+            services.AddScoped<IUserService, UserManager>();
         }
     }
 }

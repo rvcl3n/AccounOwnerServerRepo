@@ -2,21 +2,25 @@
 using Entities.Extensions;
 using Entities.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using System;
 using System.Linq;
 
 namespace AccountOwnerServer.Controllers
 {
+    [Authorize]
     [Route("api/owner")]
     [ApiController]
     public class OwnerController: ControllerBase
     {
         private ILoggerManager _logger;
+        private IUserService _userService;
         private IRepositoryWrapper _repository;
 
-        public OwnerController(ILoggerManager logger, IRepositoryWrapper repository)
+        public OwnerController(ILoggerManager logger, IUserService userService, IRepositoryWrapper repository)
         {
             _logger = logger;
+            _userService = userService;
             _repository = repository;
         }
 
@@ -115,6 +119,18 @@ namespace AccountOwnerServer.Controllers
                 _logger.LogError($"Something went wrong inside CreateOwner action: {ex.Message}");
                 return StatusCode(500, "Internal server error");
             }
+        }
+
+        [AllowAnonymous]
+        [HttpPost("authenticate")]
+        public IActionResult Authenticate([FromBody]Owner userParam)
+        {
+            var user = _userService.Authenticate(userParam.Email, userParam.Password);
+
+            if (user == null)
+                return BadRequest(new { message = "Username or password is incorrect" });
+
+            return Ok(user);
         }
 
         [HttpPut("{id}")]

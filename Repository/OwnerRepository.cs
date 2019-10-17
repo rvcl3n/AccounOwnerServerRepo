@@ -16,6 +16,11 @@ namespace Repository
         {
         }
 
+        private List<Owner> _users = new List<Owner>
+        {
+            new Owner { Id = new Guid(), Name = "TestAuth", Email = "testEmail", Password = "test", DateOfBirth=new DateTime(), Address ="TestAddress"}
+        };
+
         public IEnumerable<Owner> GetAllOwners()
         {
             return FindAll()
