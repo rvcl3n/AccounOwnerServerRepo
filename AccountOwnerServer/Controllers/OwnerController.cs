@@ -5,6 +5,14 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using System;
 using System.Linq;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text;
+using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
+using UserService;
+using Microsoft.Extensions.Options;
+using Entities.Dtos;
+using AutoMapper;
 
 namespace AccountOwnerServer.Controllers
 {
@@ -16,12 +24,16 @@ namespace AccountOwnerServer.Controllers
         private ILoggerManager _logger;
         private IUserService _userService;
         private IRepositoryWrapper _repository;
+        private readonly AppSettings _appSettings;
+        private IMapper _mapper;
 
-        public OwnerController(ILoggerManager logger, IUserService userService, IRepositoryWrapper repository)
+        public OwnerController(ILoggerManager logger, IUserService userService, IRepositoryWrapper repository, IMapper mapper, IOptions<AppSettings> appSettings)
         {
             _logger = logger;
             _userService = userService;
             _repository = repository;
+            _appSettings = appSettings.Value;
+            _mapper = mapper;
         }
 
         [HttpGet]
@@ -123,14 +135,54 @@ namespace AccountOwnerServer.Controllers
 
         [AllowAnonymous]
         [HttpPost("authenticate")]
-        public IActionResult Authenticate([FromBody]Owner userParam)
+        public IActionResult Authenticate([FromBody]OwnerDto ownerDto)
         {
-            var user = _userService.Authenticate(userParam.Email, userParam.Password);
+            var user = _userService.Authenticate(ownerDto.Email, ownerDto.Password);
 
             if (user == null)
                 return BadRequest(new { message = "Username or password is incorrect" });
 
-            return Ok(user);
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.ASCII.GetBytes(_appSettings.Secret);
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new Claim[]
+                {
+                    new Claim(ClaimTypes.Name, user.Id.ToString())
+                }),
+                Expires = DateTime.UtcNow.AddDays(7),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            };
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            var tokenString = tokenHandler.WriteToken(token);
+
+            // return basic user info (without password) and token to store client side
+            return Ok(new
+            {
+                Id = user.Id,
+                Name = user.Name,
+                Token = tokenString
+            });
+        }
+
+        [AllowAnonymous]
+        [HttpPost("register")]
+        public IActionResult Register([FromBody]OwnerDto ownerDto)
+        {
+            // map dto to entity
+            var owner = _mapper.Map<Owner>(ownerDto);
+
+            try
+            {
+                // save 
+                _userService.Create(owner, ownerDto.Password);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                // return error message if there was an exception
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPut("{id}")]

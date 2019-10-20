@@ -19,9 +19,11 @@ namespace Entities.Models
         public string Email { get; set; }
 
         //[Required(ErrorMessage = "Password is required")]
-        public string Password { get; set; }
+        public byte[] PasswordHash { get; set; }
 
-        [Required(ErrorMessage = "Date of birth is required")]
+        public byte[] PasswordSalt { get; set; }
+
+        //[Required(ErrorMessage = "Date of birth is required")]
         public DateTime DateOfBirth { get; set; }
 
         [Required(ErrorMessage = "Address is required")]

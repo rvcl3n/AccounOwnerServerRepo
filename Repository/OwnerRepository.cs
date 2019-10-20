@@ -16,11 +16,6 @@ namespace Repository
         {
         }
 
-        private List<Owner> _users = new List<Owner>
-        {
-            new Owner { Id = new Guid(), Name = "TestAuth", Email = "testEmail", Password = "test", DateOfBirth=new DateTime(), Address ="TestAddress"}
-        };
-
         public IEnumerable<Owner> GetAllOwners()
         {
             return FindAll()
@@ -32,6 +27,12 @@ namespace Repository
         {
             return FindByCondition(owner => owner.Id.Equals(ownerId))
                     .DefaultIfEmpty(new Owner())
+                    .FirstOrDefault();
+        }
+
+        public Owner GetOwnerByEmail(string email)
+        {
+            return FindByCondition(owner => owner.Email.Equals(email))
                     .FirstOrDefault();
         }
 
