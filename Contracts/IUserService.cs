@@ -10,5 +10,9 @@ namespace Contracts
         Owner Create(Owner owner, string password);
 
         Owner GetById(Guid id);
+
+        void Update(Owner user, string password = null);
+
+        void Delete(Owner ownerParam);
     }
 }

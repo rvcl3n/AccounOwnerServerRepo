@@ -65,6 +65,50 @@ namespace UserService
             return user;
         }
 
+        public void Update(Owner ownerParam, string password = null)
+        {
+            var owner = _repository.Owner.GetOwnerById(ownerParam.Id);
+
+            if (owner == null)
+                throw new Exception("User not found");
+
+            if (ownerParam.Email != owner.Email)
+            {
+                // username has changed so check if the new username is already taken
+                if (_repository.Owner.GetOwnerByEmail(ownerParam.Email) != null)
+                    throw new Exception("Username " + ownerParam.Email + " is already taken");
+            }
+
+            // update user properties
+            owner.Email = ownerParam.Email;
+            owner.Name = ownerParam.Name;
+            owner.DateOfBirth = ownerParam.DateOfBirth;
+            owner.Address = ownerParam.Address;
+
+            // update password if it was entered
+            if (!string.IsNullOrWhiteSpace(password))
+            {
+                byte[] passwordHash, passwordSalt;
+                CreatePasswordHash(password, out passwordHash, out passwordSalt);
+
+                owner.PasswordHash = passwordHash;
+                owner.PasswordSalt = passwordSalt;
+            }
+
+            _repository.Owner.Update(owner);
+            _repository.Save();
+        }
+
+        public void Delete(Owner ownerParam)
+        {
+            var owner = _repository.Owner.GetOwnerById(ownerParam.Id);
+            if (owner != null)
+            {
+                _repository.Owner.DeleteOwner(owner);
+                _repository.Save();
+            }
+        }
+
         private static void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
         {
             if (password == null) throw new ArgumentNullException("password");

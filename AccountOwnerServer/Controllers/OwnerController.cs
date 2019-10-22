@@ -13,6 +13,7 @@ using UserService;
 using Microsoft.Extensions.Options;
 using Entities.Dtos;
 using AutoMapper;
+using System.Collections.Generic;
 
 namespace AccountOwnerServer.Controllers
 {
@@ -43,9 +44,18 @@ namespace AccountOwnerServer.Controllers
             {
                 var owners = _repository.Owner.GetAllOwners();
 
+                var ownerDto = _mapper.Map<OwnerDto>(owners.ToArray()[0]);
+
+                List<OwnerDto> ownersDto = new List<OwnerDto>();
+
+                foreach (var owner in owners)
+                {
+                    ownersDto.Add(_mapper.Map<OwnerDto>(owner));
+                }
+
                 _logger.LogInfo($"Returned all owners from database.");
 
-                return Ok(owners);
+                return Ok(ownersDto);
             }
             catch (Exception ex)
             {
@@ -186,15 +196,15 @@ namespace AccountOwnerServer.Controllers
         }
 
         [HttpPut("{id}")]
-        public IActionResult UpdateOwner(Guid id, [FromBody]Owner owner)
+        public IActionResult UpdateOwner(Guid id, [FromBody]OwnerDto ownerDto)
         {
             try
             {
-                if (owner.IsObjectNull())
+                /*if (ownerDto.IsObjectNull())
                 {
                     _logger.LogError("Owner object sent from client is null.");
                     return BadRequest("Owner object is null");
-                }
+                }*/
 
                 if (!ModelState.IsValid)
                 {
@@ -202,17 +212,11 @@ namespace AccountOwnerServer.Controllers
                     return BadRequest("Invalid model object");
                 }
 
-                var dbOwner = _repository.Owner.GetOwnerById(id);
-                if (dbOwner.IsEmptyObject())
-                {
-                    _logger.LogError($"Owner with id: {id}, hasn't been found in db.");
-                    return NotFound();
-                }
+                var owner = _mapper.Map<Owner>(ownerDto);
+                owner.Id = id;
 
-                _repository.Owner.UpdateOwner(dbOwner, owner);
-                _repository.Save();
-
-                return NoContent();
+                _userService.Update(owner, ownerDto.Password);
+                return Ok();
             }
             catch (Exception ex)
             {
@@ -226,7 +230,7 @@ namespace AccountOwnerServer.Controllers
         {
             try
             {
-                var owner = _repository.Owner.GetOwnerById(id);
+                var owner = _userService.GetById(id);
                 if (owner.IsEmptyObject())
                 {
                     _logger.LogError($"Owner with id: {id}, hasn't been found in db.");
@@ -239,8 +243,7 @@ namespace AccountOwnerServer.Controllers
                     return BadRequest("Cannot delete owner. It has related accounts. Delete those accounts first");
                 }
 
-                _repository.Owner.DeleteOwner(owner);
-                _repository.Save();
+                _userService.Delete(owner);
 
                 return NoContent();
             }
