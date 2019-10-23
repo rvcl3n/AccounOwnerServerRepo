@@ -22,11 +22,11 @@ namespace AccountOwnerServer.Controllers
     [ApiController]
     public class OwnerController: ControllerBase
     {
-        private ILoggerManager _logger;
-        private IUserService _userService;
-        private IRepositoryWrapper _repository;
+        private readonly ILoggerManager _logger;
+        private readonly IUserService _userService;
+        private readonly IRepositoryWrapper _repository;
         private readonly AppSettings _appSettings;
-        private IMapper _mapper;
+        private readonly IMapper _mapper;
 
         public OwnerController(ILoggerManager logger, IUserService userService, IRepositoryWrapper repository, IMapper mapper, IOptions<AppSettings> appSettings)
         {
@@ -52,6 +52,8 @@ namespace AccountOwnerServer.Controllers
                 {
                     ownersDto.Add(_mapper.Map<OwnerDto>(owner));
                 }
+
+                //var ownerDtoss = _mapper.Map<List<OwnerDto>>(owners);
 
                 _logger.LogInfo($"Returned all owners from database.");
 
