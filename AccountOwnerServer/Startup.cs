@@ -32,6 +32,9 @@ namespace AccountOwnerServer
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            //services.AddControllers();
+            services.AddMvc(options => options.EnableEndpointRouting = false);
+
             services.ConfigureCors();
 
             services.ConfigureIISIntegration();
@@ -44,7 +47,7 @@ namespace AccountOwnerServer
 
             services.ConfigureRepositoryWrapper();
 
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_3_0);
             services.AddAutoMapper(typeof(Startup));
 
             var appSettingsSection = Configuration.GetSection("AppSettings");
@@ -106,7 +109,8 @@ namespace AccountOwnerServer
                 .AllowAnyOrigin()
                 .AllowAnyMethod()
                 .AllowAnyHeader()
-                .AllowCredentials());
+                //.AllowCredentials()
+                );
 
             app.UseForwardedHeaders(new ForwardedHeadersOptions
             {

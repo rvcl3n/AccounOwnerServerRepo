@@ -20,7 +20,8 @@ namespace AccountOwnerServer.Extensions
                     builder => builder.AllowAnyOrigin()
                     .AllowAnyMethod()
                     .AllowAnyHeader()
-                    .AllowCredentials());
+                    //.AllowCredentials()
+                    );
             });
         }
 
