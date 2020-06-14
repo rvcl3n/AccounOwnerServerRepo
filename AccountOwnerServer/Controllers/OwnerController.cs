@@ -5,12 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using System;
 using System.Linq;
-using System.IdentityModel.Tokens.Jwt;
-using System.Text;
-using Microsoft.IdentityModel.Tokens;
-using System.Security.Claims;
-using UserService;
-using Microsoft.Extensions.Options;
 using Entities.Dtos;
 using AutoMapper;
 using System.Collections.Generic;
@@ -25,15 +19,13 @@ namespace AccountOwnerServer.Controllers
         private readonly ILoggerManager _logger;
         private readonly IUserService _userService;
         private readonly IRepositoryWrapper _repository;
-        private readonly AppSettings _appSettings;
         private readonly IMapper _mapper;
 
-        public OwnerController(ILoggerManager logger, IUserService userService, IRepositoryWrapper repository, IMapper mapper, IOptions<AppSettings> appSettings)
+        public OwnerController(ILoggerManager logger, IUserService userService, IRepositoryWrapper repository, IMapper mapper)
         {
             _logger = logger;
             _userService = userService;
             _repository = repository;
-            _appSettings = appSettings.Value;
             _mapper = mapper;
         }
 
@@ -154,19 +146,7 @@ namespace AccountOwnerServer.Controllers
             if (user == null)
                 return BadRequest(new { message = "Username or password is incorrect" });
 
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(_appSettings.Secret);
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(new Claim[]
-                {
-                    new Claim(ClaimTypes.Name, user.Id.ToString())
-                }),
-                Expires = DateTime.UtcNow.AddDays(7),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-            };
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            var tokenString = tokenHandler.WriteToken(token);
+            var tokenString = _userService.GetJWTToken(user.Id);
 
             // return basic user info (without password) and token to store client side
             return Ok(new

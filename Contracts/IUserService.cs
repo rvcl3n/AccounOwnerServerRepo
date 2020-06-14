@@ -7,6 +7,8 @@ namespace Contracts
     {
         Owner Authenticate(string username, string password);
 
+        string GetJWTToken(Guid userId);
+
         Owner Create(Owner owner, string password);
 
         Owner GetById(Guid id);

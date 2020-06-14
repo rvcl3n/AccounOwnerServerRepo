@@ -3,16 +3,22 @@ using System.Collections.Generic;
 using Contracts;
 using Entities.Models;
 using System.Text;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
+using Microsoft.Extensions.Options;
 
 namespace UserService
 {
     public class UserManager : IUserService
     {
         private IRepositoryWrapper _repository;
+        private readonly AppSettings _appSettings;
 
-        public UserManager(IRepositoryWrapper repository)
+        public UserManager(IRepositoryWrapper repository, IOptions<AppSettings> appSettings)
         {
             _repository = repository;
+            _appSettings = appSettings.Value;
         }
 
         public IEnumerable<Owner> GetAll()
@@ -63,6 +69,23 @@ namespace UserService
 
             // authentication successful
             return user;
+        }
+
+        public string GetJWTToken(Guid userId)
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.ASCII.GetBytes(_appSettings.Secret);
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new Claim[]
+                {
+                    new Claim(ClaimTypes.Name, userId.ToString())
+                }),
+                Expires = DateTime.UtcNow.AddDays(7),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            };
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
         }
 
         public void Update(Owner ownerParam, string password = null)
