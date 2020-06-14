@@ -2,36 +2,54 @@
 using Entities.Extensions;
 using Entities.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using System;
 using System.Linq;
+using Entities.Dtos;
+using AutoMapper;
+using System.Collections.Generic;
 
 namespace AccountOwnerServer.Controllers
 {
+    [Authorize]
     [Route("api/owner")]
     [ApiController]
     public class OwnerController: ControllerBase
     {
-        private ILoggerManager _logger;
-        private IRepositoryWrapper _repository;
+        private readonly ILoggerManager _logger;
+        private readonly IUserService _userService;
+        private readonly IRepositoryWrapper _repository;
+        private readonly IMapper _mapper;
 
-        public OwnerController(ILoggerManager logger, IRepositoryWrapper repository)
+        public OwnerController(ILoggerManager logger, IUserService userService, IRepositoryWrapper repository, IMapper mapper)
         {
             _logger = logger;
+            _userService = userService;
             _repository = repository;
+            _mapper = mapper;
         }
 
         [HttpGet]
         public IActionResult GetAllOwners()
         {
-            //return StatusCode(500, "Some message");
-
             try
             {
                 var owners = _repository.Owner.GetAllOwners();
 
+                var ownerDto = _mapper.Map<OwnerDto>(owners.ToArray()[0]);
+
+                List<OwnerDto> ownersDto = new List<OwnerDto>();
+
+                foreach (var owner in owners)
+                {
+                    ownersDto.Add(_mapper.Map<OwnerDto>(owner));
+                }
+
+                //var ownerDtoss = _mapper.Map<List<OwnerDto>>(owners);
+
                 _logger.LogInfo($"Returned all owners from database.");
 
-                return Ok(owners);
+                return Ok(ownersDto);
             }
             catch (Exception ex)
             {
@@ -119,16 +137,56 @@ namespace AccountOwnerServer.Controllers
             }
         }
 
+        [AllowAnonymous]
+        [HttpPost("authenticate")]
+        public IActionResult Authenticate([FromBody]OwnerDto ownerDto)
+        {
+            var user = _userService.Authenticate(ownerDto.Email, ownerDto.Password);
+
+            if (user == null)
+                return BadRequest(new { message = "Username or password is incorrect" });
+
+            var tokenString = _userService.GetJWTToken(user.Id);
+
+            // return basic user info (without password) and token to store client side
+            return Ok(new
+            {
+                Id = user.Id,
+                Name = user.Name,
+                Token = tokenString
+            });
+        }
+
+        [AllowAnonymous]
+        [HttpPost("register")]
+        public IActionResult Register([FromBody]OwnerDto ownerDto)
+        {
+            // map dto to entity
+            var owner = _mapper.Map<Owner>(ownerDto);
+
+            try
+            {
+                // save 
+                _userService.Create(owner, ownerDto.Password);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                // return error message if there was an exception
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpPut("{id}")]
-        public IActionResult UpdateOwner(Guid id, [FromBody]Owner owner)
+        public IActionResult UpdateOwner(Guid id, [FromBody]OwnerDto ownerDto)
         {
             try
             {
-                if (owner.IsObjectNull())
+                /*if (ownerDto.IsObjectNull())
                 {
                     _logger.LogError("Owner object sent from client is null.");
                     return BadRequest("Owner object is null");
-                }
+                }*/
 
                 if (!ModelState.IsValid)
                 {
@@ -136,17 +194,11 @@ namespace AccountOwnerServer.Controllers
                     return BadRequest("Invalid model object");
                 }
 
-                var dbOwner = _repository.Owner.GetOwnerById(id);
-                if (dbOwner.IsEmptyObject())
-                {
-                    _logger.LogError($"Owner with id: {id}, hasn't been found in db.");
-                    return NotFound();
-                }
+                var owner = _mapper.Map<Owner>(ownerDto);
+                owner.Id = id;
 
-                _repository.Owner.UpdateOwner(dbOwner, owner);
-                _repository.Save();
-
-                return NoContent();
+                _userService.Update(owner, ownerDto.Password);
+                return Ok();
             }
             catch (Exception ex)
             {
@@ -160,7 +212,7 @@ namespace AccountOwnerServer.Controllers
         {
             try
             {
-                var owner = _repository.Owner.GetOwnerById(id);
+                var owner = _userService.GetById(id);
                 if (owner.IsEmptyObject())
                 {
                     _logger.LogError($"Owner with id: {id}, hasn't been found in db.");
@@ -173,8 +225,7 @@ namespace AccountOwnerServer.Controllers
                     return BadRequest("Cannot delete owner. It has related accounts. Delete those accounts first");
                 }
 
-                _repository.Owner.DeleteOwner(owner);
-                _repository.Save();
+                _userService.Delete(owner);
 
                 return NoContent();
             }

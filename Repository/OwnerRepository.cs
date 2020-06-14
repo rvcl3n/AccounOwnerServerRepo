@@ -30,6 +30,12 @@ namespace Repository
                     .FirstOrDefault();
         }
 
+        public Owner GetOwnerByEmail(string email)
+        {
+            return FindByCondition(owner => owner.Email.Equals(email))
+                    .FirstOrDefault();
+        }
+
         public OwnerExtended GetOwnerWithDetails(Guid ownerId)
         {
             return new OwnerExtended(GetOwnerById(ownerId))
