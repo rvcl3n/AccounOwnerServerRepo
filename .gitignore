@@ -31,5 +31,5 @@ msbuild.wrn
 # Visual Studio 2015
 .vs/
 
-# Logs
-*.txt
+LoggerService/logs
+AccountOwnerServer/AccountOwnerServer/LoggerService/logs
