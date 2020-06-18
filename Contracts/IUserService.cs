@@ -9,6 +9,10 @@ namespace Contracts
 
         string GetJWTToken(Guid userId);
 
+        string GetJWTRefreshToken(string ipAddress);
+
+        AuthenticateResponse RefreshToken(string token, string ipAddress);
+
         Owner Create(Owner owner, string password);
 
         Owner GetById(Guid id);

@@ -14,7 +14,7 @@ namespace AccountOwnerServer.Controllers
     [Authorize]
     [Route("api/owner")]
     [ApiController]
-    public class OwnerController: ControllerBase
+    public class OwnerController : ControllerBase
     {
         private readonly ILoggerManager _logger;
         private readonly IUserService _userService;
@@ -109,7 +109,7 @@ namespace AccountOwnerServer.Controllers
         }
 
         [HttpPost]
-        public IActionResult CreateOwner([FromBody]Owner owner)
+        public IActionResult CreateOwner([FromBody] Owner owner)
         {
             try
             {
@@ -139,7 +139,7 @@ namespace AccountOwnerServer.Controllers
 
         [AllowAnonymous]
         [HttpPost("authenticate")]
-        public IActionResult Authenticate([FromBody]OwnerDto ownerDto)
+        public IActionResult Authenticate([FromBody] OwnerDto ownerDto)
         {
             var user = _userService.Authenticate(ownerDto.Email, ownerDto.Password);
 
@@ -147,14 +147,36 @@ namespace AccountOwnerServer.Controllers
                 return BadRequest(new { message = "Username or password is incorrect" });
 
             var tokenString = _userService.GetJWTToken(user.Id);
+            var refreshtokenString = _userService.GetJWTRefreshToken(ipAddress());
+
+            user.RefreshToken = refreshtokenString;
+
+            _userService.Update(user);
 
             // return basic user info (without password) and token to store client side
-            return Ok(new
+            /*return Ok(new
             {
                 Id = user.Id,
                 Name = user.Name,
-                Token = tokenString
-            });
+                Token = tokenString,
+                RefreshToken = refreshtokenString
+            });*/
+            return Ok(new AuthenticateResponse(user, tokenString, refreshtokenString));
+        }
+
+        [AllowAnonymous]
+        [HttpPost("refreshtoken")]
+        public IActionResult RefreshToken([FromBody] RefreshTokenDto refreshTokenDto)
+        {
+            //var refreshToken = Request.Cookies["refreshToken"];
+            var response = _userService.RefreshToken(refreshTokenDto.refreshToken, ipAddress());
+
+            if (response == null)
+                return Unauthorized(new { message = "Invalid token" });
+
+            //setTokenCookie(response.RefreshToken);
+
+            return Ok(response);
         }
 
         [AllowAnonymous]
@@ -234,6 +256,14 @@ namespace AccountOwnerServer.Controllers
                 _logger.LogError($"Something went wrong inside DeleteOwner action: {ex.Message}");
                 return StatusCode(500, "Internal server error");
             }
+        }
+
+        private string ipAddress()
+        {
+            if (Request.Headers.ContainsKey("X-Forwarded-For"))
+                return Request.Headers["X-Forwarded-For"];
+            else
+                return HttpContext.Connection.RemoteIpAddress.MapToIPv4().ToString();
         }
     }
 }

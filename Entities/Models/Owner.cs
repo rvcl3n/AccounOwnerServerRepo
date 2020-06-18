@@ -23,10 +23,12 @@ namespace Entities.Models
 
         public byte[] PasswordSalt { get; set; }
 
+        public string RefreshToken { get; set; }
+
         //[Required(ErrorMessage = "Date of birth is required")]
         public DateTime DateOfBirth { get; set; }
 
-        [Required(ErrorMessage = "Address is required")]
+        //[Required(ErrorMessage = "Address is required")]
         [StringLength(100, ErrorMessage = "Address cannot be loner then 100 characters")]
         public string Address { get; set; }
 

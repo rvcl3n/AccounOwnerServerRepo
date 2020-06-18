@@ -7,6 +7,7 @@ using System.IdentityModel.Tokens.Jwt;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using Microsoft.Extensions.Options;
+using System.Security.Cryptography;
 
 namespace UserService
 {
@@ -81,11 +82,46 @@ namespace UserService
                 {
                     new Claim(ClaimTypes.Name, userId.ToString())
                 }),
-                Expires = DateTime.UtcNow.AddDays(7),
+                Expires = DateTime.UtcNow.AddMinutes(15),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
+        }
+
+        //public RefreshToken GetJWTRefreshToken(string ipAddress)
+        public string GetJWTRefreshToken(string ipAddress)
+        {
+            using (var rngCryptoServiceProvider = new RNGCryptoServiceProvider())
+            {
+                var randomBytes = new byte[64];
+                rngCryptoServiceProvider.GetBytes(randomBytes);
+                return Convert.ToBase64String(randomBytes);
+            }
+        }
+
+        public AuthenticateResponse RefreshToken(string token, string ipAddress)
+        {
+            var user = _repository.Owner.GetOwnerByRefreshToken(token);
+
+            // return null if no user found with token
+            if (user == null) return null;
+
+            var refreshToken = user.RefreshToken;
+
+            // return null if token is no longer active
+           // if (!refreshToken.IsActive) return null;
+
+            // replace old refresh token with a new one and save
+            string newRefreshToken = GetJWTRefreshToken(ipAddress);
+            user.RefreshToken = newRefreshToken;
+            _repository.Owner.Update(user);
+            _repository.Save();
+
+            // generate new jwt
+            string jwtToken = GetJWTToken(user.Id);
+
+            return new AuthenticateResponse(user, jwtToken, newRefreshToken);
         }
 
         public void Update(Owner ownerParam, string password = null)
@@ -107,6 +143,7 @@ namespace UserService
             owner.Name = ownerParam.Name;
             owner.DateOfBirth = ownerParam.DateOfBirth;
             owner.Address = ownerParam.Address;
+            owner.RefreshToken = ownerParam.RefreshToken;
 
             // update password if it was entered
             if (!string.IsNullOrWhiteSpace(password))

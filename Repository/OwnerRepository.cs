@@ -25,7 +25,7 @@ namespace Repository
 
         public Owner GetOwnerById(Guid ownerId)
         {
-            return FindByCondition(owner => owner.Id.Equals(ownerId))
+            return FindByCondition(owner => owner.Id.Equals(ownerId)).ToList()
                     .DefaultIfEmpty(new Owner())
                     .FirstOrDefault();
         }
@@ -33,6 +33,13 @@ namespace Repository
         public Owner GetOwnerByEmail(string email)
         {
             return FindByCondition(owner => owner.Email.Equals(email))
+                    .FirstOrDefault();
+        }
+
+        public Owner GetOwnerByRefreshToken(string refreshToken)
+        {
+            return FindByCondition(owner => owner.RefreshToken.Equals(refreshToken)).ToList()
+                    .DefaultIfEmpty(new Owner())
                     .FirstOrDefault();
         }
 
